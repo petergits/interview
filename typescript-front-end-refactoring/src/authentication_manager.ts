@@ -5,119 +5,118 @@ export class AuthenticationManager {
       this.baseUrl = baseUrl;
     }
   
-    public isLoggedIn(): Promise<boolean> {
-      return new Promise((resolve, reject) => {
-        let token = localStorage.getItem("auth_token");
-  
-        this.validateToken(token).then((valid) => {
+    public async isLoggedIn(): Promise<boolean> {
+        const token = localStorage.getItem("auth_token");
+
+        try {
+          const valid = await this.validateToken(token);
           if (valid) {
             console.log("token valid ");
-            resolve(true);
+            return true;
           } else {
             console.log("token not valid ");
             localStorage.removeItem("auth_token");
-            reject(false);
+            return false;
           }
-        });
-      });
+        } catch (error) {
+          console.error("Error validating token:", error);
+          return false;
+        }
     }
   
-    private validateToken(token): Promise<boolean> {
-      return new Promise((resolve, reject) => {
-        fetch(this.baseUrl + "/validateToken", {
-          method: "POST",
-          mode: "cors",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          referrerPolicy: "no-referrer",
-          body: JSON.stringify({ token }),
-        }).then((valid) => {
-          if (valid) {
-            resolve(true);
-          } else {
-            console.debug("clearing auth token because it failed validation");
-            localStorage.removeItem("auth_token");
-            resolve(false);
-          }
+    private async validateToken(token: string): Promise<boolean> {
+        const response = await fetch(this.baseUrl + "/validateToken", {
+            method: "POST",
+            mode: "cors",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            referrerPolicy: "no-referrer",
+            body: JSON.stringify({ token }),
         });
-      });
-    }
-  
-    public login(username, password, rememberMe): Promise<any> {
-      return new Promise((resolve, reject) => {
-        fetch(this.baseUrl + "/login", {
-          method: "POST",
-          mode: "cors",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          referrerPolicy: "no-referrer",
-          body: JSON.stringify({ username, password }),
-        })
-          .then(async (response) => {
-            if (rememberMe) {
-              const token = await response.json();
-              localStorage.setItem("auth_token", token);  
-            }
-            
-            fetch(this.baseUrl + "/profile/" + username, {
-              method: "GET",
-              mode: "cors",
-              referrerPolicy: "no-referrer",
-            }).then((response) => {
-              let profile = response.json();
-              fetch(this.baseUrl + "/roles/" + username, {
-                method: "GET",
-                mode: "cors",
-                referrerPolicy: "no-referrer",
-              })
-                .then((response2) => {
-                  const groups = response.json();
-                  resolve({ profile, groups });
-                })
-                .catch((e) => {
-                  reject(e);
-                });
-            });
-          })
-          .catch((e) => {
-            reject(e);
+    
+        if (response.ok) {
+          return true;
+        } else {
+          console.debug("clearing auth token because it failed validation");
+          localStorage.removeItem("auth_token");
+          return false;
+        }
+    }  
+    
+    public async login(username: string, password: string, rememberMe: boolean): Promise<any> {
+        try {
+          const response = await fetch(this.baseUrl + "/login", {
+            method: "POST",
+            mode: "cors",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            referrerPolicy: "no-referrer",
+            body: JSON.stringify({ username, password }),
           });
-      });
-    }
-  
-    public async getProfileForLoggedInUser(): Promise<any> {
-      let token = localStorage.getItem("auth_token");
-  
+    
+          if (rememberMe && response.ok) {
+            const token = await response.json();
+            localStorage.setItem("auth_token", token);
+          }
+    
+          const profileResponse = await fetch(this.baseUrl + "/profile/" + username, {
+            method: "GET",
+            mode: "cors",
+            referrerPolicy: "no-referrer",
+          });
+          const profile = await profileResponse.json();
+    
+          const groupsResponse = await fetch(this.baseUrl + "/roles/" + username, {
+            method: "GET",
+            mode: "cors",
+            referrerPolicy: "no-referrer",
+          });
+          const groups = await groupsResponse.json();
+    
+          return { profile, groups };
+        } catch (error) {
+          console.error("Error during login:", error);
+          throw error;
+        }
+      }
+    
+  public async getProfileForLoggedInUser(): Promise<any> {
+    const token = localStorage.getItem("auth_token");
+
+    try {
       const response = await fetch(this.baseUrl + "/get?token=" + token, {
         method: "GET",
         mode: "cors",
         referrerPolicy: "no-referrer",
       });
-  
       const { username } = await response.json();
-  
-      return fetch(this.baseUrl + "/profile/" + username, {
+
+      const profileResponse = await fetch(this.baseUrl + "/profile/" + username, {
         method: "GET",
         mode: "cors",
         referrerPolicy: "no-referrer",
-      }).then((response) => {
-        let profile = response.json();
-        fetch(this.baseUrl + "/roles/" + username, {
-          method: "GET",
-          mode: "cors",
-          referrerPolicy: "no-referrer",
-        }).then((response2) => {
-          const groups = response.json();
-          return { profile, groups };
-        });
       });
+      const profile = await profileResponse.json();
+
+      const groupsResponse = await fetch(this.baseUrl + "/roles/" + username, {
+        method: "GET",
+        mode: "cors",
+        referrerPolicy: "no-referrer",
+      });
+      const groups = await groupsResponse.json();
+
+      return { profile, groups };
+    } catch (error) {
+      console.error("Error getting profile for logged in user:", error);
+      throw error;
     }
-  
-    public async logout(): Promise<void> {
-      let token: string = localStorage.get("auth_token");
-  
+  }
+    
+  public async logout(): Promise<void> {
+    const token = localStorage.getItem("auth_token");
+    try {
       await fetch(this.baseUrl + "/logout", {
         method: "POST",
         mode: "cors",
@@ -125,16 +124,14 @@ export class AuthenticationManager {
           "Content-Type": "application/json",
         },
         referrerPolicy: "no-referrer",
-        body: JSON.stringify({ token: token }),
+        body: JSON.stringify({ token }),
       });
-  
+
       localStorage.removeItem("auth_token");
-  
-      // await fetch(this.baseUrl + "/get?token=" + token, {
-      //   method: "GET",
-      //   mode: "cors",
-      //   referrerPolicy: "no-referrer",
-      // });
+    } catch (error) {
+      console.error("Error during logout:", error);
+      throw error;
     }
   }
+}
   
