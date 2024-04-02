@@ -5,22 +5,24 @@ export class AuthenticationManager {
       this.baseUrl = baseUrl;
     }
   
-    public isLoggedIn(): Promise<boolean> {
-      return new Promise((resolve, reject) => {
-        let token = localStorage.getItem("auth_token");
-  
-        this.validateToken(token).then((valid) => {
-          if (valid) {
-            console.log("token valid ");
-            resolve(true);
-          } else {
-            console.log("token not valid ");
-            localStorage.removeItem("auth_token");
-            reject(false);
-          }
-        });
-      });
+    public async isLoggedIn(): Promise<boolean> {
+    const token = localStorage.getItem("auth_token");
+
+    try {
+      const valid = await this.validateToken(token);
+      if (valid) {
+        console.log("token valid ");
+        return true;
+      } else {
+        console.log("token not valid ");
+        localStorage.removeItem("auth_token");
+        return false;
+      }
+    } catch (error) {
+      console.error("Error validating token:", error);
+      return false;
     }
+  }
   
     private validateToken(token): Promise<boolean> {
       return new Promise((resolve, reject) => {
