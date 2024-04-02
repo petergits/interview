@@ -43,81 +43,44 @@ export class AuthenticationManager {
           return false;
         }
     }  
+    
     public async login(username: string, password: string, rememberMe: boolean): Promise<any> {
-    try {
-      const response = await fetch(this.baseUrl + "/login", {
-        method: "POST",
-        mode: "cors",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        referrerPolicy: "no-referrer",
-        body: JSON.stringify({ username, password }),
-      });
-
-      if (rememberMe && response.ok) {
-        const token = await response.json();
-        localStorage.setItem("auth_token", token);
+        try {
+          const response = await fetch(this.baseUrl + "/login", {
+            method: "POST",
+            mode: "cors",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            referrerPolicy: "no-referrer",
+            body: JSON.stringify({ username, password }),
+          });
+    
+          if (rememberMe && response.ok) {
+            const token = await response.json();
+            localStorage.setItem("auth_token", token);
+          }
+    
+          const profileResponse = await fetch(this.baseUrl + "/profile/" + username, {
+            method: "GET",
+            mode: "cors",
+            referrerPolicy: "no-referrer",
+          });
+          const profile = await profileResponse.json();
+    
+          const groupsResponse = await fetch(this.baseUrl + "/roles/" + username, {
+            method: "GET",
+            mode: "cors",
+            referrerPolicy: "no-referrer",
+          });
+          const groups = await groupsResponse.json();
+    
+          return { profile, groups };
+        } catch (error) {
+          console.error("Error during login:", error);
+          throw error;
+        }
       }
-
-      const profileResponse = await fetch(this.baseUrl + "/profile/" + username, {
-        method: "GET",
-        mode: "cors",
-        referrerPolicy: "no-referrer",
-      });
-      const profile = await profileResponse.json();
-
-      const groupsResponse = await fetch(this.baseUrl + "/roles/" + username, {
-        method: "GET",
-        mode: "cors",
-        referrerPolicy: "no-referrer",
-      });
-      const groups = await groupsResponse.json();
-
-      return { profile, groups };
-    } catch (error) {
-      console.error("Error during login:", error);
-      throw error;
-    }
-  }
-  
-  public async login(username: string, password: string, rememberMe: boolean): Promise<any> {
-    try {
-      const response = await fetch(this.baseUrl + "/login", {
-        method: "POST",
-        mode: "cors",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        referrerPolicy: "no-referrer",
-        body: JSON.stringify({ username, password }),
-      });
-
-      if (rememberMe && response.ok) {
-        const token = await response.json();
-        localStorage.setItem("auth_token", token);
-      }
-
-      const profileResponse = await fetch(this.baseUrl + "/profile/" + username, {
-        method: "GET",
-        mode: "cors",
-        referrerPolicy: "no-referrer",
-      });
-      const profile = await profileResponse.json();
-
-      const groupsResponse = await fetch(this.baseUrl + "/roles/" + username, {
-        method: "GET",
-        mode: "cors",
-        referrerPolicy: "no-referrer",
-      });
-      const groups = await groupsResponse.json();
-
-      return { profile, groups };
-    } catch (error) {
-      console.error("Error during login:", error);
-      throw error;
-    }
-  }
     
   public async getProfileForLoggedInUser(): Promise<any> {
     const token = localStorage.getItem("auth_token");
@@ -150,11 +113,10 @@ export class AuthenticationManager {
       throw error;
     }
   }
-
-
-    public async logout(): Promise<void> {
-      let token: string = localStorage.get("auth_token");
-  
+    
+  public async logout(): Promise<void> {
+    const token = localStorage.getItem("auth_token");
+    try {
       await fetch(this.baseUrl + "/logout", {
         method: "POST",
         mode: "cors",
@@ -162,16 +124,14 @@ export class AuthenticationManager {
           "Content-Type": "application/json",
         },
         referrerPolicy: "no-referrer",
-        body: JSON.stringify({ token: token }),
+        body: JSON.stringify({ token }),
       });
-  
+
       localStorage.removeItem("auth_token");
-  
-      // await fetch(this.baseUrl + "/get?token=" + token, {
-      //   method: "GET",
-      //   mode: "cors",
-      //   referrerPolicy: "no-referrer",
-      // });
+    } catch (error) {
+      console.error("Error during logout:", error);
+      throw error;
     }
   }
+}
   
