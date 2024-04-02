@@ -6,46 +6,43 @@ export class AuthenticationManager {
     }
   
     public async isLoggedIn(): Promise<boolean> {
-    const token = localStorage.getItem("auth_token");
+        const token = localStorage.getItem("auth_token");
 
-    try {
-      const valid = await this.validateToken(token);
-      if (valid) {
-        console.log("token valid ");
-        return true;
-      } else {
-        console.log("token not valid ");
-        localStorage.removeItem("auth_token");
-        return false;
-      }
-    } catch (error) {
-      console.error("Error validating token:", error);
-      return false;
-    }
-  }
-  
-    private validateToken(token): Promise<boolean> {
-      return new Promise((resolve, reject) => {
-        fetch(this.baseUrl + "/validateToken", {
-          method: "POST",
-          mode: "cors",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          referrerPolicy: "no-referrer",
-          body: JSON.stringify({ token }),
-        }).then((valid) => {
+        try {
+          const valid = await this.validateToken(token);
           if (valid) {
-            resolve(true);
+            console.log("token valid ");
+            return true;
           } else {
-            console.debug("clearing auth token because it failed validation");
+            console.log("token not valid ");
             localStorage.removeItem("auth_token");
-            resolve(false);
+            return false;
           }
-        });
-      });
+        } catch (error) {
+          console.error("Error validating token:", error);
+          return false;
+        }
     }
   
+    private async validateToken(token: string): Promise<boolean> {
+        const response = await fetch(this.baseUrl + "/validateToken", {
+            method: "POST",
+            mode: "cors",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            referrerPolicy: "no-referrer",
+            body: JSON.stringify({ token }),
+        });
+    
+        if (response.ok) {
+          return true;
+        } else {
+          console.debug("clearing auth token because it failed validation");
+          localStorage.removeItem("auth_token");
+          return false;
+        }
+    }  
     public login(username, password, rememberMe): Promise<any> {
       return new Promise((resolve, reject) => {
         fetch(this.baseUrl + "/login", {
